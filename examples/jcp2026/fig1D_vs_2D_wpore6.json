@@ -1,0 +1,24 @@
+{
+  "_source": "Reproduces the single-file (dashed) curves in fig:1D_vs_2D (panels a-c) of the JCP 2026 paper, w_pore = 6 A. Symmetric RPM electrolyte, T=400K, epsr=20, ion diameter 5A, mu_IL/2 = -0.2975 eV.",
+  "_units": {
+    "T": "K",
+    "r_pore_A": "Angstrom (nominal pore radius: radius to the centre of the wall atoms)",
+    "eshift_A": "Angstrom (inward shift of the image-charge screening surface relative to r_pore_A)",
+    "ions.R": "Angstrom",
+    "ions.q": "e",
+    "ions.mu_eV": "eV (bulk electrochemical potential per ion, mu_IL/2)",
+    "scan_min/max/step": "V (voltage mode)"
+  },
+  "T": 400,
+  "epsr": 20.0,
+  "r_pore_A": 7.185,
+  "eshift_A": 2.5,
+  "ions": [
+    { "q": 1.0, "R": 2.5, "mu_eV": -0.2975, "name": "Cat" },
+    { "q": -1.0, "R": 2.5, "mu_eV": -0.2975, "name": "An" }
+  ],
+  "mode": "voltage",
+  "scan_min": 0.0,
+  "scan_max": 1.0,
+  "scan_step": 0.02
+}
