@@ -1,0 +1,43 @@
+{
+  "_units": {
+    "T": "K",
+    "r_pore_A": "Angstrom (nominal pore radius: radius to the centre of the wall atoms, e.g. carbon nuclei for a CNT)",
+    "wall_atom_r_A": "Angstrom (physical radius of a wall atom; r_pore_A - wall_atom_r_A - ion.R is the radius accessible to an ion's centre)",
+    "eshift_A": "Angstrom (inward shift of the image-charge screening surface relative to r_pore_A; the screening electron density sits slightly inside the wall-atom centres, so the effective conducting surface radius used for image-charge/interionic electrostatics is r_pore_A - eshift_A, not r_pore_A itself)",
+    "eps_lj_eV": "eV (LJ epsilon, 0 = off)",
+    "ions.R": "Angstrom",
+    "ions.q": "e",
+    "ions.mu_eV": "eV  (= mu_bulk + psi)",
+    "ions.mu_bulk_eV": "eV  (bulk chemical potential from input JSON)",
+    "ions.psi_eV": "eV  (3D->1D confinement + image charge free energy)",
+    "scan_min/max/step": "V (voltage mode) or eV (mu mode)"
+  },
+  "T": 298,
+  "epsr": 12.0,
+  "r_pore_A": 5.0,
+  "wall_atom_r_A": 1.685,
+  "eshift_A": 0.8,
+  "eps_lj_eV": 0.0,
+  "ions": [
+    {
+      "q": 1.0,
+      "R": 2.79,
+      "mu_eV": 0.23386060599072436,
+      "mu_bulk_eV": 0.11267164590081744,
+      "psi_eV": 0.12118896008990693,
+      "name": "EMIM+"
+    },
+    {
+      "q": -1.0,
+      "R": 2.3,
+      "mu_eV": 0.2052897288847721,
+      "mu_bulk_eV": 0.048932653787634464,
+      "psi_eV": 0.15635707509713764,
+      "name": "BF4-"
+    }
+  ],
+  "mode": "voltage",
+  "scan_min": -1.0,
+  "scan_max": 1.0,
+  "scan_step": 0.01
+}
