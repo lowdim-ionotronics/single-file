@@ -1,0 +1,5 @@
+numpy
+scipy
+
+# Only needed for make_pore_cfg.py (lib/func_psi.py):
+# mplib - https://github.com/lowdim-ionotronics/mplib

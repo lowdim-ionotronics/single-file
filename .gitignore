@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+*.dat
+pore.json
+!examples/**/*.json
+.DS_Store
