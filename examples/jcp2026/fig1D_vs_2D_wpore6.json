@@ -5,6 +5,7 @@
     "r_pore_A": "Angstrom (nominal pore radius: radius to the centre of the wall atoms)",
     "eshift_A": "Angstrom (inward shift of the image-charge screening surface relative to r_pore_A)",
     "wall_atom_r_A": "Angstrom (physical wall-atom radius; r_pore_A - wall_atom_r_A is the accessible radius used for the charge/capacitance surface-area normalization)",
+    "r_accessible_A": "Angstrom (= r_pore_A - wall_atom_r_A, given explicitly here for cross-checking; must be consistent or calc_pore.py errors out)",
     "ions.R": "Angstrom",
     "ions.q": "e",
     "ions.mu_eV": "eV (mu_IL/2 + psi, the confinement-corrected per-ion chemical potential)",
@@ -13,6 +14,7 @@
   "T": 400,
   "epsr": 20.0,
   "r_pore_A": 4.685,
+  "r_accessible_A": 3.0,
   "eshift_A": 0.0,
   "wall_atom_r_A": 1.685,
   "ions": [

@@ -31,7 +31,13 @@ Input JSON format (from chempot/calc_mu.py -o):
 
 Usage:
   make_pore_cfg.py -i mix_mus.json --r-pore 3.5 -o pore.json
+  make_pore_cfg.py -i mix_mus.json --r-pore-accessible 3.0 -o pore.json
   make_pore_cfg.py -i mix_mus.json --r-pore 3.5 --epsr-pore 2.0 --eps-lj 0.3 -o pore.json
+
+Give either --r-pore (nominal, to wall-atom centres) or --r-pore-accessible
+(matching mpore's -A/--tube-radius and how pore width is usually reported
+in the paper) -- or both, in which case they must agree with --wall-atom-r
+or the tool errors out rather than silently using the wrong one.
 """
 import sys
 import os
@@ -93,6 +99,8 @@ def build_pore_cfg(bulk_cfg, r_pore_A, epsr_pore=None,
             'wall_atom_r_A': 'Angstrom (physical radius of a wall atom; '
                              'r_pore_A - wall_atom_r_A - ion.R is the radius '
                              "accessible to an ion's centre)",
+            'r_accessible_A': 'Angstrom (= r_pore_A - wall_atom_r_A, given explicitly here '
+                              'for cross-checking; must be consistent or calc_pore.py errors out)',
             'eshift_A': 'Angstrom (inward shift of the image-charge screening '
                         'surface relative to r_pore_A; the screening electron '
                         'density sits slightly inside the wall-atom centres, '
@@ -107,7 +115,7 @@ def build_pore_cfg(bulk_cfg, r_pore_A, epsr_pore=None,
             'scan_min/max/step': 'V (voltage mode) or eV (mu mode)',
         },
         'T': T, 'epsr': epsr_pore,
-        'r_pore_A': r_pore_A,
+        'r_pore_A': r_pore_A, 'r_accessible_A': r_pore_A - wall_atom_r,
         'wall_atom_r_A': wall_atom_r, 'eshift_A': eshift, 'eps_lj_eV': eps_lj,
         'ions': pore_ions,
         'mode': 'voltage',
@@ -123,8 +131,12 @@ def main():
 
     parser.add_argument('-i', '--input', required=True, metavar='FILE',
                         help='Bulk ions JSON with mu_eV (from chempot/calc_mu.py -o)')
-    parser.add_argument('--r-pore', type=float, required=True, metavar='A',
-                        help='Pore radius [Å]')
+    parser.add_argument('--r-pore', type=float, default=None, metavar='A',
+                        help='Nominal pore radius [Å] (to wall-atom centres). '
+                             'Give this or --r-pore-accessible (or both, consistently).')
+    parser.add_argument('--r-pore-accessible', type=float, default=None, metavar='A',
+                        help='Accessible pore radius [Å] (matches mpore\'s -A/--tube-radius '
+                             'and how pore width is usually reported in the paper).')
     parser.add_argument('--epsr-pore', type=float, default=None, metavar='EPS',
                         help='Dielectric constant inside pore '
                              '(default: same as epsr in input JSON)')
@@ -150,6 +162,22 @@ def main():
         parser.error("Input JSON must have an 'ions' key with mu_eV per ion. "
                      "Run  chempot/calc_mu.py -i <mix.json> -o <mus.json>  first.")
 
+    if args.r_pore is None and args.r_pore_accessible is None:
+        parser.error("give at least one of --r-pore (nominal) or --r-pore-accessible")
+    if args.r_pore is not None and args.r_pore_accessible is not None:
+        expected = args.r_pore - args.wall_atom_r
+        if abs(expected - args.r_pore_accessible) > 1e-6:
+            parser.error(
+                f"inconsistent pore geometry: --r-pore={args.r_pore} - "
+                f"--wall-atom-r={args.wall_atom_r} = {expected}, but "
+                f"--r-pore-accessible={args.r_pore_accessible} was also given "
+                f"(differs by {expected - args.r_pore_accessible:+.6f} A)")
+        r_pore = args.r_pore
+    elif args.r_pore is None:
+        r_pore = args.r_pore_accessible + args.wall_atom_r
+    else:
+        r_pore = args.r_pore
+
     if args.voltage:
         parts = args.voltage.split(',')
         if len(parts) != 3:
@@ -161,10 +189,10 @@ def main():
     outfile = args.out
     if outfile is None:
         stem    = os.path.splitext(os.path.basename(args.input))[0]
-        outfile = f"{stem}_r{args.r_pore}.json"
+        outfile = f"{stem}_r{r_pore}.json"
 
     pore_cfg = build_pore_cfg(
-        bulk_cfg, args.r_pore,
+        bulk_cfg, r_pore,
         epsr_pore=args.epsr_pore,
         wall_atom_r=args.wall_atom_r,
         eshift=args.eshift,
@@ -174,7 +202,7 @@ def main():
 
     epsr_pore = args.epsr_pore if args.epsr_pore is not None else bulk_cfg.get('epsr', 1.0)
     print(f"# input:   {args.input}  T={bulk_cfg['T']}K", file=sys.stderr)
-    print(f"# pore:    r_pore={args.r_pore}A  epsr={epsr_pore}  "
+    print(f"# pore:    r_pore={r_pore}A  r_accessible={r_pore - args.wall_atom_r}A  epsr={epsr_pore}  "
           f"wall_atom_r={args.wall_atom_r:.4f}A  eshift={args.eshift}A  "
           f"eps_lj={args.eps_lj}eV", file=sys.stderr)
     for ion in pore_cfg['ions']:

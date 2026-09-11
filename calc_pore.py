@@ -51,6 +51,11 @@ picture):
     limit) are correct. wall_atom_r_A defaults to 0 if omitted, in which
     case the accessible and nominal radii coincide.
 
+You may give 'r_accessible_A' instead of (or in addition to) 'r_pore_A' --
+papers typically report the accessible pore width directly. If both are
+given they must be consistent with wall_atom_r_A (see resolve_radii()); a
+mismatch raises an error rather than silently using the wrong one.
+
 Ion mu_eV values are the individual bulk chemical potentials.
 In "mu" mode a common shift w is added to all ions at each scan step.
 """
@@ -99,6 +104,40 @@ def find_pzc(ions, bv0, rr0, dmax, kBTeV, u_range=3.0):
     for ion in ions:
         ion.set_elchempot(0.0)
     return pzc
+
+
+def resolve_radii(cfg, tol=1e-6):
+    """Resolve (r_pore_A, r_accessible_A) from a pore-config dict.
+
+    Accepts either or both of 'r_pore_A' (nominal, to wall-atom centres)
+    and 'r_accessible_A' (accessible, where ion charge actually resides),
+    related by r_accessible_A = r_pore_A - wall_atom_r_A. If both are
+    given, they must be consistent with wall_atom_r_A (default 0) or a
+    ValueError is raised -- this is exactly the nominal-vs-accessible mixup
+    that once caused calc_pore.py's charge/capacitance normalization to
+    silently use the wrong radius. If only one is given, the other is
+    derived.
+    """
+    wall_atom_r = cfg.get('wall_atom_r_A', 0.0)
+    r_pore       = cfg.get('r_pore_A')
+    r_accessible = cfg.get('r_accessible_A')
+
+    if r_pore is None and r_accessible is None:
+        raise ValueError("pore config must set at least one of "
+                          "'r_pore_A' (nominal) or 'r_accessible_A' (accessible)")
+    if r_pore is not None and r_accessible is not None:
+        expected = r_pore - wall_atom_r
+        if abs(expected - r_accessible) > tol:
+            raise ValueError(
+                f"inconsistent pore geometry: r_pore_A={r_pore} - wall_atom_r_A={wall_atom_r} "
+                f"= {expected}, but r_accessible_A={r_accessible} was also given "
+                f"(differs by {expected - r_accessible:+.6f} A)")
+    elif r_pore is None:
+        r_pore = r_accessible + wall_atom_r
+    else:
+        r_accessible = r_pore - wall_atom_r
+
+    return r_pore, r_accessible
 
 
 def build_ions(ion_cfgs, kBTeV, rr0):
@@ -221,10 +260,10 @@ def main():
     mode          = cfg.get('mode', 'mu')
     T             = cfg['T']
     epsr          = cfg['epsr']
-    r_pore        = cfg['r_pore_A']
     eshift        = cfg['eshift_A']
     wall_atom_r   = cfg.get('wall_atom_r_A', 0.0)
-    r_accessible  = r_pore - wall_atom_r
+    r_pore, r_accessible = resolve_radii(cfg)
+    cfg['r_pore_A'], cfg['r_accessible_A'] = r_pore, r_accessible
 
     cfg.setdefault('scan_min',  -0.4 if mode == 'mu' else -1.0)
     cfg.setdefault('scan_max',   0.8 if mode == 'mu' else  1.0)

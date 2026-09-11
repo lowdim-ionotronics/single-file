@@ -62,6 +62,15 @@ python3 calc_pore.py -i examples/example_emimBF4.json
   effective conducting/dielectric surface used for the ion-ion electrostatic interaction is
   `r_pore_A - eshift_A`, since the screening electron density sits slightly inside the wall-atom
   centres rather than exactly at them.
+- `wall_atom_r_A` (optional, default 0) — physical wall-atom radius. `r_pore_A - wall_atom_r_A`
+  is the **accessible** pore radius: the radius of the cylindrical surface where ion charge
+  actually resides. This — not the nominal `r_pore_A` — is what the charge/capacitance surface
+  normalization uses internally; conflating the two silently distorts the shape of the charging
+  curve even though the steric close-packing limit (and hence the saturation charge) looks fine.
+  You can give `r_accessible_A` directly instead of (or alongside) `r_pore_A` — matching how pore
+  width is usually reported in the literature — and `calc_pore.py` derives whichever is missing.
+  If you give both, they must agree with `wall_atom_r_A` or `calc_pore.py` raises an error rather
+  than silently picking one.
 - `ions[].mu_eV` — the bulk (or already pore-corrected) chemical potential of each ion.
 - `mode` — `"voltage"` scans the electrode potential `u` [V] at fixed chemical potentials;
   `"mu"` scans a common shift to all ions' chemical potentials [eV] at a fixed voltage `u_V`.
@@ -79,6 +88,11 @@ confinement free energy shift to get pore-corrected `mu_eV` values:
 python3 make_pore_cfg.py -i bulk_mus.json --r-pore 3.75 -o pore.json
 python3 calc_pore.py -i pore.json
 ```
+
+Give `--r-pore-accessible` instead of `--r-pore` if you have the accessible radius rather than
+the nominal one (matching how pore width is usually reported in the literature). If you give
+both, they must agree with `--wall-atom-r` (default 1.685 Å, the CNT carbon radius) or the tool
+errors out.
 
 This requires [mplib](https://github.com/lowdim-ionotronics/mplib) to be installed
 (`mplib_ctypes`).
