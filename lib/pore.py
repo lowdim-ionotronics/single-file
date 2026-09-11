@@ -56,19 +56,29 @@ def d_max_ren(ions_radii_A, rr0):
     return 2.0 * max(ions_radii_A) / rr0
 
 
-def q_factor(r_pore_A, r_ion_max_A):
+def q_factor(r_accessible_A, r_ion_max_A):
     """Prefactor: dimensionless 1D charge density -> µC/cm².
     Q [µC/cm²] = q_factor * charge_au
+
+    r_accessible_A must be the *accessible* pore radius (r_pore_A minus the
+    wall-atom radius, i.e. the radius of the cylindrical surface where ion
+    charge actually resides), not the nominal radius to the wall-atom
+    centres. Using the nominal radius here (rather than in bV0/rr0, which
+    correctly use the screening-surface radius r_pore_A - eshift) distorts
+    the shape of the charging curve even when the close-packing limit is
+    unaffected.
     """
-    r_pore_m = r_pore_A * 1e-10
+    r_pore_m = r_accessible_A * 1e-10
     r_ion_m  = r_ion_max_A * 1e-10
     return e_charge / (2.0 * math.pi * r_pore_m * 2.0 * r_ion_m) * 100.0
 
 
-def C_factor(T, r_pore_A, r_ion_max_A):
+def C_factor(T, r_accessible_A, r_ion_max_A):
     """Prefactor: d(charge_au)/d(u_kBT) -> µF/cm².
     C [µF/cm²] = C_factor * delta_charge_au / delta_u_kBT
+
+    r_accessible_A must be the *accessible* pore radius — see q_factor().
     """
-    r_pore_m = r_pore_A * 1e-10
+    r_pore_m = r_accessible_A * 1e-10
     r_ion_m  = r_ion_max_A * 1e-10
     return e_charge**2 / (2.0 * math.pi * r_pore_m * 2.0 * r_ion_m * k_B * T) * 100.0

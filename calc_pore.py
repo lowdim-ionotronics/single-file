@@ -18,6 +18,7 @@ JSON format:
     "epsr": 5.0,
     "r_pore_A": 3.75,
     "eshift_A": 0.8,
+    "wall_atom_r_A": 1.685,
     "ions": [
       {"q": -1, "R": 2.5, "mu_eV": 0.0},
       {"q":  1, "R": 2.5, "mu_eV": 0.0}
@@ -30,14 +31,25 @@ JSON format:
     "output": "result.dat"
   }
 
-r_pore_A is the nominal pore radius, i.e. the radius to the centre of the
-wall atoms (e.g. carbon nuclei for a CNT). eshift_A is the inward shift,
-from r_pore_A, of the image-charge screening surface: the effective
-conducting/dielectric surface used in bV0/rr0 (the ion-ion electrostatic
-interaction and length scale) is r_pore_A - eshift_A, since the screening
-electron density sits slightly inside the wall-atom centres rather than
-exactly at them. See lib/func_psi.py and lib/pore.py for the full picture,
-including the wall_atom_r_A radius used by make_pore_cfg.py.
+Three radii describe the pore geometry (see lib/func_psi.py for the full
+picture):
+  r_pore_A is the nominal pore radius, i.e. the radius to the centre of the
+    wall atoms (e.g. carbon nuclei for a CNT).
+  r_pore_A - eshift_A is the image-charge screening-surface radius: the
+    effective conducting/dielectric surface used in bV0/rr0 (the ion-ion
+    electrostatic interaction and length scale), since the screening
+    electron density sits slightly inside the wall-atom centres rather
+    than exactly at them.
+  r_pore_A - wall_atom_r_A is the accessible pore radius, i.e. the radius
+    of the cylindrical surface where ion charge actually resides once the
+    physical extent of the wall atoms is excluded. This (not the nominal
+    r_pore_A) is what the charge/capacitance surface-area normalization
+    (q_factor/C_factor in lib/pore.py) must use to convert the dimensionless
+    in-pore charge into a physical µC/cm² surface density; using the
+    nominal radius there systematically distorts the shape of the
+    charging curve even when bV0/rr0 (and hence the steric close-packing
+    limit) are correct. wall_atom_r_A defaults to 0 if omitted, in which
+    case the accessible and nominal radii coincide.
 
 Ion mu_eV values are the individual bulk chemical potentials.
 In "mu" mode a common shift w is added to all ions at each scan step.
@@ -206,11 +218,13 @@ def main():
     if args.scan_step is not None: cfg['scan_step'] = args.scan_step
     if args.epsr_pore is not None: cfg['epsr']      = args.epsr_pore
 
-    mode       = cfg.get('mode', 'mu')
-    T          = cfg['T']
-    epsr       = cfg['epsr']
-    r_pore     = cfg['r_pore_A']
-    eshift     = cfg['eshift_A']
+    mode          = cfg.get('mode', 'mu')
+    T             = cfg['T']
+    epsr          = cfg['epsr']
+    r_pore        = cfg['r_pore_A']
+    eshift        = cfg['eshift_A']
+    wall_atom_r   = cfg.get('wall_atom_r_A', 0.0)
+    r_accessible  = r_pore - wall_atom_r
 
     cfg.setdefault('scan_min',  -0.4 if mode == 'mu' else -1.0)
     cfg.setdefault('scan_max',   0.8 if mode == 'mu' else  1.0)
@@ -224,10 +238,10 @@ def main():
     bv0    = p.bV0(T, epsr, r_pore, eshift)
     r_max  = max(d['R'] for d in cfg['ions'])
     dmax   = p.d_max_ren([d['R'] for d in cfg['ions']], rr0)
-    qf     = p.q_factor(r_pore, r_max)
-    Cf     = p.C_factor(T, r_pore, r_max)
+    qf     = p.q_factor(r_accessible, r_max)
+    Cf     = p.C_factor(T, r_accessible, r_max)
 
-    print(f"# T={T}K  epsr={epsr}  r_pore={r_pore}Å  eshift={eshift}Å  lB={p.lB_A(T,epsr):.3f}Å  bV0={bv0:.4f}  rr0={rr0:.4f}Å")
+    print(f"# T={T}K  epsr={epsr}  r_pore={r_pore}Å  eshift={eshift}Å  wall_atom_r={wall_atom_r}Å  r_accessible={r_accessible}Å  lB={p.lB_A(T,epsr):.3f}Å  bV0={bv0:.4f}  rr0={rr0:.4f}Å")
     print(f"# mode={mode}  scan=[{cfg['scan_min']}, {cfg['scan_max']}, {cfg['scan_step']}]")
     print(f"# kBT={kBTeV:.5f}eV  dmax={dmax:.4f}  q_factor={qf:.4e}  C_factor={Cf:.4e}")
 
