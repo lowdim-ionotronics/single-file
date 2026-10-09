@@ -56,6 +56,11 @@ papers typically report the accessible pore width directly. If both are
 given they must be consistent with wall_atom_r_A (see resolve_radii()); a
 mismatch raises an error rather than silently using the wrong one.
 
+If the bulk-vs-pore JSON used a Born desolvation correction
+(make_pore_cfg.py --born), 'epsr_bulk' is carried along in this JSON purely
+for display -- it does not otherwise affect the pore calculation below,
+which only ever uses the pore's own 'epsr'.
+
 Ion mu_eV values are the individual bulk chemical potentials.
 In "mu" mode a common shift w is added to all ions at each scan step.
 """
@@ -84,6 +89,11 @@ def ion_header_lines(ion_cfgs):
         label = f"{name}  " if name else ''
         lines.append(f"# ion[{i}] {label}q={d['q']:+g}  R={d['R']}A  mu={d['mu_eV']}eV\n")
     return lines
+
+
+def epsr_header_str(cfg):
+    epsr_bulk = cfg.get('epsr_bulk', cfg['epsr'])
+    return f"epsr_pore={cfg['epsr']}" + (f"  epsr_bulk={epsr_bulk}" if epsr_bulk != cfg['epsr'] else "")
 
 
 def find_pzc(ions, bv0, rr0, dmax, kBTeV, u_range=3.0):
@@ -160,7 +170,7 @@ def run_mu_scan(cfg, ions, base_mus, bv0, rr0, dmax, qf, Cf, kBTeV, outfile):
     pzc = find_pzc(ions, bv0, rr0, dmax, kBTeV)
     pzc_str = f"{pzc:.4f} V" if pzc is not None else "not found in [-3,3] V"
     with open(outfile, 'w') as f:
-        f.write(f"# mode=mu  T={cfg['T']}K  epsr={cfg['epsr']}  r_pore={cfg['r_pore_A']}A  u={u_V}V\n")
+        f.write(f"# mode=mu  T={cfg['T']}K  {epsr_header_str(cfg)}  r_pore={cfg['r_pore_A']}A  u={u_V}V\n")
         f.write(f"# PZC = {pzc_str}\n")
         for line in ion_header_lines(cfg['ions']): f.write(line)
         f.write(f"# (1)mu[eV]  (2)rho_tot  (3)Q[uC/cm2]  (4)C[uF/cm2]\n")
@@ -200,7 +210,7 @@ def run_voltage_scan(cfg, ions, bv0, rr0, dmax, qf, Cf, kBTeV, outfile):
     pzc = find_pzc(ions, bv0, rr0, dmax, kBTeV)
     pzc_str = f"{pzc:.4f} V" if pzc is not None else "not found in [-3,3] V"
     with open(outfile, 'w') as f:
-        f.write(f"# mode=voltage  T={cfg['T']}K  epsr={cfg['epsr']}  r_pore={cfg['r_pore_A']}A\n")
+        f.write(f"# mode=voltage  T={cfg['T']}K  {epsr_header_str(cfg)}  r_pore={cfg['r_pore_A']}A\n")
         f.write(f"# PZC = {pzc_str}\n")
         for line in ion_header_lines(cfg['ions']): f.write(line)
         f.write(f"# (1)u[V]  (2)Q[uC/cm2]  (3)C[uF/cm2]  (4)rho_tot\n")
@@ -260,6 +270,7 @@ def main():
     mode          = cfg.get('mode', 'mu')
     T             = cfg['T']
     epsr          = cfg['epsr']
+    epsr_bulk     = cfg.get('epsr_bulk', epsr)
     eshift        = cfg['eshift_A']
     wall_atom_r   = cfg.get('wall_atom_r_A', 0.0)
     r_pore, r_accessible = resolve_radii(cfg)
@@ -280,7 +291,8 @@ def main():
     qf     = p.q_factor(r_accessible, r_max)
     Cf     = p.C_factor(T, r_accessible, r_max)
 
-    print(f"# T={T}K  epsr={epsr}  r_pore={r_pore}Å  eshift={eshift}Å  wall_atom_r={wall_atom_r}Å  r_accessible={r_accessible}Å  lB={p.lB_A(T,epsr):.3f}Å  bV0={bv0:.4f}  rr0={rr0:.4f}Å")
+    epsr_str = f"epsr_pore={epsr}" + (f"  epsr_bulk={epsr_bulk}" if epsr_bulk != epsr else "")
+    print(f"# T={T}K  {epsr_str}  r_pore={r_pore}Å  eshift={eshift}Å  wall_atom_r={wall_atom_r}Å  r_accessible={r_accessible}Å  lB={p.lB_A(T,epsr):.3f}Å  bV0={bv0:.4f}  rr0={rr0:.4f}Å")
     print(f"# mode={mode}  scan=[{cfg['scan_min']}, {cfg['scan_max']}, {cfg['scan_step']}]")
     print(f"# kBT={kBTeV:.5f}eV  dmax={dmax:.4f}  q_factor={qf:.4e}  C_factor={Cf:.4e}")
 
